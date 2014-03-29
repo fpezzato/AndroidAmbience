@@ -1,10 +1,15 @@
 package it.francescopezzato.android.androidambience.app.ambience;
 
 import android.app.Activity;
+import android.os.Build;
 import android.os.Handler;
 import android.os.Message;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.ViewTreeObserver;
+import android.view.animation.Animation;
+import android.view.animation.AnimationUtils;
+import android.view.animation.TranslateAnimation;
 import android.widget.FrameLayout;
 
 import java.lang.ref.WeakReference;
@@ -81,8 +86,27 @@ public class AmbienceManager extends Handler {
 
 			((FrameLayout.LayoutParams) ambienceViewparams).topMargin = containerViewHeight - ambienceViewparams.height;
 
+
+			ambienceView.startAnimation(getInAnimation(ambienceView));
 			containerView.addView(ambienceView, containerView.getChildCount(), ambienceViewparams);
 
+			/*ambienceView.requestLayout(); // This is needed so the animation can use the measured with/height
+
+			ambienceView.getViewTreeObserver().addOnGlobalLayoutListener(new ViewTreeObserver.OnGlobalLayoutListener() {
+				@Override
+				public void onGlobalLayout() {
+					if (Build.VERSION.SDK_INT < Build.VERSION_CODES.JELLY_BEAN) {
+						ambienceView.getViewTreeObserver().removeGlobalOnLayoutListener(this);
+					} else {
+						ambienceView.getViewTreeObserver().removeOnGlobalLayoutListener(this);
+					}
+
+					ambienceView.startAnimation(getInAnimation(ambienceView));
+				}
+			});*/
+
+
+			//auto hide
 			Message message = obtainMessage(Messages.REMOVE_CURRENT_AMBIENCE);
 			message.obj = ambienceView;
 
@@ -90,9 +114,17 @@ public class AmbienceManager extends Handler {
 		}
 	}
 
-	private void hideAmbience(View ambience) {
-		ViewGroup parent = (ViewGroup) ambience.getParent();
-		parent.removeView(ambience);
+	private void hideAmbience(final View ambience) {
+		final ViewGroup parent = (ViewGroup) ambience.getParent();
+		Animation animation = getOutAnimation(ambience);
+
+		ambience.startAnimation(getOutAnimation(ambience));
+
+		new Handler().postDelayed(new Runnable() {
+			public void run() { 
+				parent.removeView(ambience);
+			}
+		}, animation.getDuration());
 
 	}
 
@@ -110,4 +142,33 @@ public class AmbienceManager extends Handler {
 		}
 
 	}
+
+	private Animation getInAnimation(View ambience){
+		ambience.measure(View.MeasureSpec.UNSPECIFIED,   View.MeasureSpec.UNSPECIFIED);
+		Animation translateIn = new TranslateAnimation(
+				//X stuff (from,to)
+				0,
+				0,
+				//Y stuff
+				ambience.getMeasuredHeight(),
+				0
+		);
+		translateIn.setDuration(500);
+		return  translateIn;
+	}
+
+	private Animation getOutAnimation(View ambience){
+		 Animation translateOut = new TranslateAnimation(
+				//X stuff (from,to)
+				0,
+				0,
+				//Y stuff
+				0,
+				ambience.getMeasuredHeight()
+		);
+		translateOut.setDuration(500);
+		return  translateOut;
+	}
+
+
 }
